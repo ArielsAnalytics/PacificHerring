@@ -1,0 +1,40 @@
+# AS 5/12/23
+# Pacific Herring App
+
+
+# add output in server
+
+library(shiny)
+
+# Define UI for application that draws a histogram
+ui <- fluidPage(
+
+    # Application title
+    titlePanel("Herring Hatching Success and Protiens"),
+    # image 
+    tabPanel(title = "Herring",
+             imageOutput("atherring")),
+    #Table
+    mainPanel( fluidRow( column(12,
+             tableOutput('table'))
+      )
+    )
+)
+      
+
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+  # render image - not working :(
+  output$atherring <- renderImage({
+    
+    list(src = "www/atherring.png",
+         width = "100%",
+         height = 330)
+    
+  }, deleteFile = F)
+  # output table also not working :(
+  output$table <- renderDataTable("TotalHatchData.xlsx")
+}
+   
+# Run the application 
+shinyApp(ui = ui, server = server)
