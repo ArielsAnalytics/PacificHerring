@@ -1,0 +1,113 @@
+# AS Last Edit: 5/31/23
+# Herring Hatching Success App
+
+# Install Libraries
+library(shiny)
+library(readr)
+library(shinythemes)
+library(ggplot2)
+
+# Import dataset
+Hatch <- read_csv("TotalHatchData.csv")
+Hatch <- as.data.frame(Hatch)
+
+######################################## User Interface ########################################
+ui <- fluidPage(
+  theme = shinytheme("paper"),
+  # Add header (idea from https://towardsdatascience.com/putting-the-shine-in-shiny-apps-e3de370b5661)
+  tags$div(class = "jumbotron text-center", style = "margin-bottom:0px;margin-top:0px",
+           tags$h2(class = 'jumbotron-heading', style = 'margin-bottom:0px;margin-top:0px', 'Pacific Herring Research'),
+           p('Learn about hatching success for pacific herring under different temperature conditions')
+  ),
+  # Image of herring 
+  # !! ISSUE: cannot position right, tried changing width and column changes to no luck
+  fluidRow(column(width = 5, title = "Herring",
+                  imageOutput("atherring")),
+  # Description of app
+ column (width = 7, h4("Pacific herring (Clupea pallasii) are a culturally and ecologically important fish to the Salish Sea region. These herring are an integral part of the food web, supporting higher tropic-level predators. My research explores 
+     the molecular-level physiological differences between embryos of two Pacific herring 
+     populations that spawn during different seasons, which may contribute to successful
+     spawning events or to the longer-term survival of hatched larvae. This app  
+     includes visual aids for hatching success data collected so far.")),
+ column (width = 7, h4("Each hatching success phase consists of 360 herring embryos from one sampling date. Each sampling
+                       date is a different temperature and is either from Semiahmoo Bay of Cherry Point sites. All samples so far 
+                       are from the Semiahmoo Bay site."))
+ ),
+  
+  # Select phase to look at 
+  selectInput("phase", "Select Phase:", choices = unique(Hatch$Phase)),
+  
+  # Picture of Temperature, Plot, and Summary Table
+  fluidRow(
+    column(3,
+           imageOutput("tempDrawings")
+    ),
+    column(5,
+           plotOutput("hatchPlot")  # Add plot output for hatch graph
+    ),
+    
+    column(4,
+           tableOutput("summaryTable")
+    ),
+    column(2,
+           tableOutput("hatchingtable") 
+    
+    )
+  
+)
+)
+
+########################################## SERVER #######################################
+
+server <- function(input, output) {
+  # image output
+  output$atherring <- renderImage({
+    list(src = "www/My_project.png")
+  }, deleteFile = F)
+  
+  # This looks in our dropdown and returns the appropriate image
+  output$tempDrawings <- renderImage({
+    #Take the phase and build a path to the image (eg 'Earth' becomes 'Earth.png')
+    phase <- input$phase
+    picFilepath <- paste(phase,'.png', sep='')
+    #This is what you have to do to render an image from the server
+    return(list(
+      src=picFilepath,
+      contentType = 'image/png',
+      alt = 'phase'
+    ))
+  })
+  
+  # reactive expression for selected data
+  selectedData <- reactive({
+    subset(Hatch, Phase == input$phase)
+  })
+  
+  # summary table 
+  output$summaryTable <- renderTable({
+    df <- data.frame(Parameters = c("Total Hatch", "Total Alive Hatch", "Total Healthy Hatch", 
+                                    "Total Deformed Hatch"), n = (colSums(selectedData()[2:5])))
+    df
+  })
+
+  
+  output$hatchingtable <- renderTable ({
+    data <- selectedData() 
+    hatching_success <- sum(data$Total_Hatch) / 360
+    deformity_rate <- sum(data$Total_Deformed)/ sum(data$Total_Hatch) 
+    df2 <- data.frame("Hatching Success" = hatching_success, "Deformity Rate" = deformity_rate)
+    df2
+      })
+  
+  # plot output 
+  output$hatchPlot <- renderPlot({
+    ggplot(selectedData(), aes(x = Date, y = Total_Hatch)) +
+      geom_point( size = 3, color = "darkred") +
+      labs(x = "Date", y = "Herring Larvae Hatch") +
+      ggtitle("Pacific Herring Daily Larval Hatch ") +
+      theme_minimal()
+  })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
